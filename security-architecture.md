@@ -1,6 +1,6 @@
-# Analytics Platform Architecture
+# Security Architecture
 
-## System Architecture Diagram
+## Diagram
 
 ```mermaid
 graph TD
