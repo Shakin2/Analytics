@@ -1,0 +1,49 @@
+graph TD
+    subgraph Identity_and_Access ["Identity & Access (Entra ID)"]
+        A[Entra ID / Azure AD] -->|Federation| B[GCP IAM]
+        A -->|Managed Identity| C[Azure Resources]
+        A -->|Short-lived Tokens| D[Non-Human Agents]
+    end
+
+    subgraph PCI_Compliant_Zone ["Production Zone (PCI Boundary)"]
+        direction TB
+        E[(Azure SQL Hyperscale)] <-->|Private Link| F[Azure Data Gateway]
+        F <-->|Delta Sharing| G[Databricks Production]
+        H[Datalake Gen2 Blobs] <-->|Private Link| G
+        
+        subgraph Developer_Access ["Secure Jump-Box (No Local Python)"]
+            I[Azure VM / DevBox]
+            J[Claude Code CLI]
+            K[Cursor - Privacy Mode]
+        end
+        
+        I -->|CyberArk Vaulted Access| E
+        J -->|Redacted Prompts| L[Mosaic AI Gateway]
+    end
+
+    subgraph AI_Foundry ["AI & LLM Services"]
+        L --> M[Azure AI Foundry: Claude 4.6]
+        M -.->|No Training on Data| L
+    end
+
+    subgraph Marketing_SaaS ["Marketing Egress"]
+        G -->|Segment Data| N[Amperity]
+        N --> O[Google Ads / Bloomreach]
+    end
+
+    subgraph Testing_Zone ["Innovation Sandbox (US Region)"]
+        P[GCP Environment]
+        Q[Databricks Test]
+        R[Antigravity Testing]
+        
+        G -.->|Curated/Masked Data Only| Q
+    end
+
+    %% Security Controls
+    B1{{Azure Firewall}} --- PCI_Compliant_Zone
+    B2{{NSG / Private Link}} --- PCI_Compliant_Zone
+    
+    %% Styling
+    style PCI_Compliant_Zone fill:#f9f,stroke:#333,stroke-width:2px
+    style Identity_and_Access fill:#dfd,stroke:#333
+    style Testing_Zone fill:#fff4dd,stroke:#d4a017
