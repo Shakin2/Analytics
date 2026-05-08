@@ -1,0 +1,120 @@
+Google_AI_Code
+#Install the SDK 
+!pip uninstall -qqy jupyterlab  # Remove unused packages from Kaggle's base image that conflict
+!pip install -U -q "google-genai==1.7.0"
+
+#Install helpers for viewing output
+from google import genai
+from google.genai import types
+from IPython.display import HTML, Markdown, display
+
+#Retry Helper to get past per minute quota
+from google.api_core import retry
+is_retriable = lambda e: (isinstance(e, genai.errors.APIError) and e.code in {429, 503})
+genai.models.Models.generate_content = retry.Retry(
+    predicate=is_retriable)(genai.models.Models.generate_content)
+
+#Same Retry Helper, but checks if already added check if doing multiple calls
+from google.api_core import retry
+is_retriable = lambda e: (isinstance(e, genai.errors.APIError) and e.code in {429, 503})
+if not hasattr(genai.models.Models.generate_content, '__wrapped__'):
+  genai.models.Models.generate_content = retry.Retry(
+      predicate=is_retriable)(genai.models.Models.generate_content)
+
+  #Add Google API Key - Collab
+  from google.colab import userdata 
+GOOGLE_API_KEY = userdata.get('GOOGLE_API_KEY') 
+# Now you can use the GOOGLE_API_KEY variable 
+print(f"Your Google API Key is: {GOOGLE_API_KEY[:5]}...") # Printing a snippet for security
+
+#Add Google API Key - Kaggle
+from kaggle_secrets import UserSecretsClient
+GOOGLE_API_KEY = UserSecretsClient().get_secret("GOOGLE_API_KEY")
+
+#See different models
+for model in client.models.list():
+  print(model.name)
+
+  #Start a chat to have multiple questions remembered
+  chat = client.chats.create(model='gemini-2.0-flash', history=[])
+  #After this then do Response and Contents Calls. Don’t need model in response as in chat
+
+client = genai.Client(api_key=GOOGLE_API_KEY) #Defines 'Client' as the Google API Key
+
+response = client.models.generate_content(model="gemini-2.0-flash", contents="Explain AI to me like I'm a kid.") #Defines 'response' as question for model. 
+                                                                                                                 #Defines 'model' as the model to call. 
+                                                                                                                 #Defines 'contents' as the question to ask.
+
+chat = client.chats.create(model='gemini-2.0-flash', history=[]) #Start a chat to have multiple questions remembered
+
+#If using chat you can define more in the response
+response = client.models.generate_content(
+    model='gemini-2.0-flash',
+    config=model_config,
+    contents=story_prompt)
+
+
+response = chat.send_message('Hello! My name is Zlork.') #Response definition when part of chat. Use after Chat created'
+
+print(response.text) #Executes and prints response
+Markdown(response.text) #Executes and prints formatted response
+from pprint import pprint #Called Pretty Print. Allows to see code and dictionaries better
+
+#Substitute the model in model.name if using different models. If not Google, will need a different API_KEY
+for model in client.models.list():
+  if model.name == 'models/gemini-2.0-flash':
+    pprint(model.to_json_dict())
+    break
+
+#From the main Gemini toolbox (google.genai), I want to take out the compartment labeled types and make it easily available for me to use.
+#Define 'short_config' to say only 200 tokens. If you have defined 'short_config' previously. If not then define first.
+#While question asks for 1000 words, token limit wont allow it"
+from google.genai import types
+short_config = types.GenerateContentConfig(max_output_tokens=200)
+response = client.models.generate_content(
+    model='gemini-2.0-flash',
+    config=short_config,
+    contents='Write a 1000 word essay on the importance of olives in modern society.')
+
+print(response.text)
+
+#Define 'high_temp_config' to set high temperature. Could set multiple levels
+#The 'for _ in range(5):' sets the questions to loop 5 times. High temp allows different answers. Low temp gets the same response
+#if response.text: print(response.text, '-' * 25) says that after each response add 25 dashes"
+high_temp_config = types.GenerateContentConfig(temperature=2.0)
+for _ in range(5):
+  response = client.models.generate_content(
+      model='gemini-2.0-flash',
+      config=high_temp_config,
+      contents='Pick a random colour... (respond in a single word)')
+if response.text:
+    print(response.text, '-' * 25)
+
+#Define 'low_temp_config' to set high temperature. Could set multiple levels
+low_temp_config = types.GenerateContentConfig(temperature=0.0)
+
+#"Defines 'model_config' as temp of 1 and a top p of 0.95.
+#You can set up multiple config. Just name define different names"
+model_config = types.GenerateContentConfig(
+    # These are the default values for gemini-2.0-flash.
+    temperature=1.0,
+    top_p=0.95,)
+
+#Define story prompt so can add into Contents easy
+story_prompt = "You are a creative writer. Write a short story about a cat who goes on an adventure." 
+
+#How use the above prompt
+contents=story_prompt
+
+#"Defines 'model_config' as temp of 1 and a top p of 0.95 and output tokens to 5.
+#You can set up multiple config. Just name define different names"
+model_config = types.GenerateContentConfig(
+    temperature=0.1,
+    top_p=1,
+    max_output_tokens=5,)
+
+zero_shot_prompt = """Classify movie reviews as POSITIVE, NEUTRAL or NEGATIVE.
+Review: "Her" is a disturbing study revealing the direction
+humanity is headed if AI is allowed to keep evolving,
+unchecked. I wish there were more movies like this masterpiece.
+Sentiment: """
